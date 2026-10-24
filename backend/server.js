@@ -1,5 +1,14 @@
 const express = require('express');
 const app = express();
+const port = process.env.PORT
+
+if(!port){
+     console.error(
+    "Missing required setting PORT. Add PORT=4000 to the .env file in the " +
+      "backend folder, then start with: node --env-file=.env server.js"
+  );
+  process.exit(1);
+}
 app.use(express.json());//this line of code is used to parse incoming JSON requests and make the data available in req.body. It allows the server to handle JSON payloads sent by clients in their requests.it is a middleware function provided by the Express framework that automatically parses the JSON data in the request body and makes it accessible as a JavaScript object. This is particularly useful when building APIs that expect clients to send data in JSON format, as it simplifies the process of extracting and working with that data within your route handlers.
 
 app.use((req,res,next)=>{
