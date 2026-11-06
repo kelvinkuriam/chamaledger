@@ -1,6 +1,8 @@
 const express = require('express');
 const { createMemberSchema } = require('./src/schemas/members');
+ const { appError } = require('./src/errors');
 
+ const { notFound,errorHandler } = require('./src/middleware/errorHandler');
 
 const required = ['PORT','DATABASE_URL'];
 
@@ -53,12 +55,15 @@ app.post("/members", async (req, res) => {
     // field) and a message. We map each one to a small, plain object.
     // This is a temporary shape. Concept 11 replaces it with the one shape
     // used by every error in the API.
-    return res.status(400).json({
-      problems: parsed.error.issues.map((issue) => ({
-        field: issue.path.join("."),
-        message: issue.message,
-      })),
-    });
+    throw appError(
+      400,
+      'VALIDATION_ERROR',
+      'The request body is not valid',
+      parsed.error.issues.map((issue)=>({
+        field:issue.path.join('.') || "(body)",
+        message:issue.message,
+      }))
+    );
   }
 
   // Use parsed.data, NOT req.body, from here on. parsed.data holds only the
@@ -72,6 +77,9 @@ app.post("/members", async (req, res) => {
   );
   res.status(201).json(result.rows[0]);
 });
+
+app.use(notFound)
+app.use(errorHandler)
 
 app.listen(4000,()=>{
     console.log('Server is running on port 4000');
