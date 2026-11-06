@@ -1,4 +1,5 @@
 const express = require('express');
+const { createMemberSchema } = require('./src/schemas/members');
 
 
 const required = ['PORT','DATABASE_URL'];
@@ -35,12 +36,41 @@ app.get('/members',async (req,res)=>{
     //sending a response in JSON format to the client when they make a GET request to the '/members' endpoint. In this case, it sends an empty array as the response.
 });//this 
 
-app.post('/members',async (req,res)=>{
-    const {name,phone} = req.body;
-    const result = await pool.query('INSERT INTO members (name,phone) VALUES($1,$2)' + 'RETURNING  ID,NAME,PHONE,created_at',[name,phone]);
 
+//route handler is responsible for handling GET requests to the '/members' endpoint. It retrieves data from the database using the pool.query() method, which executes a SQL query to fetch member records. The result of the query is stored in the result variable, and then the rows property of the result object is sent back to the client as a JSON response using res.json(). This allows clients to receive the member data in a structured format that can be easily consumed and processed on the client side.
 
-    res.status(201).json(result.rows[0])
+// POST /members adds a member, now with validation at the door (Concept 10).
+app.post("/members", async (req, res) => {
+  // safeParse checks req.body against the schema. It never throws. It
+  // returns { success: true, data } or { success: false, error }.
+  // In Express 5, req.body is undefined when the request had no body, and
+  // safeParse(undefined) reports "expected object", so we are safe.
+  const parsed = createMemberSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    // 400 Bad Request (Concept 1): the CLIENT sent something unacceptable.
+    // parsed.error.issues is a list of problems; each has a path (which
+    // field) and a message. We map each one to a small, plain object.
+    // This is a temporary shape. Concept 11 replaces it with the one shape
+    // used by every error in the API.
+    return res.status(400).json({
+      problems: parsed.error.issues.map((issue) => ({
+        field: issue.path.join("."),
+        message: issue.message,
+      })),
+    });
+  }
+
+  // Use parsed.data, NOT req.body, from here on. parsed.data holds only the
+  // fields the schema knows, already trimmed. req.body still holds the raw
+  // input, with extra fields and untrimmed spaces.
+  const { name, phone } = parsed.data;
+  const result = await pool.query(
+    "INSERT INTO members (name, phone) VALUES ($1, $2) " +
+      "RETURNING id, name, phone, created_at",
+    [name, phone]
+  );
+  res.status(201).json(result.rows[0]);
 });
 
 app.listen(4000,()=>{
