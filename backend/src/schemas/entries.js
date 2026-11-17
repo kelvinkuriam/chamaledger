@@ -50,4 +50,53 @@ const createEntrySchema = z.discriminatedUnion(
     {error: 'Invalid entry type.' }
 )
 
-module.exports =    { createEntrySchema }
+
+
+const listEntriesQuerySchema = z.object({
+
+member_id:z.coerce
+         .number({error:'member_id must be a number.'})
+         .int('member_id must be a whole number.')
+         .positive('member_id must be above zero.')
+         .optional(),
+         type:z.enum(["CONTRIBUTION","PAYOUT","FINE","REVERSAL"],{error:'type must be one of: CONTRIBUTION, PAYOUT, FINE, REVERSAL'})
+         .optional(),
+
+         from:z.iso.date({error:'from must be a valid ISO 8601 date (YYYY-MM-DD).'})
+            .optional(),
+        to:z.iso.date({error:'to must be a valid ISO 8601 date (YYYY-MM-DD).'})
+        .optional(),
+
+
+        page:z.coerce
+        .number({error:'page must be a number.'})
+        .int('page must be a whole number.')
+        .min(1,'page must be atleast 1.')
+        .default(1),
+
+
+        page_size: z.coerce.number({error:'page_size must be a number.'})
+        .int('page_size must be a whole number.')
+        .min(1,'page_size must be atleast 1.')
+        .max(100,'page_size must be at most 100.')
+        .default(20),
+})
+
+
+.refine((q)=> !q.from || !q.to || q.from <= q.to, {
+    message:'from date must be before or equal to to date.',
+path:['from'],
+})
+
+
+
+
+
+
+
+
+
+
+
+
+module.exports =    { createEntrySchema , listEntriesQuerySchema }

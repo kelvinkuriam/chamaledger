@@ -102,7 +102,67 @@ return result.rows[0];
 }
 
 
-module.exports = { createEntry }
+async function listEntries(q){
+const conditions = [];
+
+const params = [];
+
+
+if(q.member_id !== undefined){
+  params.push(q.member_id);
+  conditions.push(`member_id = $${params.length}`)};
+
+
+  if(q.type !== undefined){
+    params.push(q.type);
+    conditions.push(`type = $${params.length}`);
+  }
+
+  if(q.from !== undefined){
+    params.push(q.from);
+    conditions.push(`entry_date >= $${params.length}`);
+  }
+
+  if(q.to !== undefined){
+    params.push(q.to);
+    conditions.push(`entry_date <= $${params.length}`);
+  }
+
+  const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+
+
+const counted = await pool.query(
+  `SELECT COUNT(*) AS total FROM ledger_entries ${where}`,
+  params
+);
+
+const total =counted.rows[0].total;
+
+const offset = (q.page - 1) * q.page_size;
+
+const rows = await pool.query(
+  `SELECT ${COLUMNS} FROM ledger_entries ${where} ORDER BY entry_date DESC, id DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,params.concat([q.page_size,offset])
+)
+
+
+return {
+  data:rows.rows,
+  page:q.page,
+  page_size:q.page_size,
+  total:total,
+  total_pages:Math.ceil(total / q.page_size)
+}
+
+
+
+}
+
+
+
+
+
+
+module.exports = { createEntry, listEntries }
 
 
 
